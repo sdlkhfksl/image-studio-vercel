@@ -4,6 +4,22 @@ import { GoogleGenAI, Modality, GenerateImagesConfig, Type } from "@google/genai
 import { ImageStyle, CameraMovement, ImageModel, AspectRatio, InspirationStrength, GeneratedImage } from '../types';
 import { MultiApiKeyService } from './multiApiKeyService';
 
+// 检查是否使用代理
+const PROXY_URL = import.meta.env.VITE_GEMINI_PROXY_URL;
+const USE_PROXY = !!PROXY_URL;
+
+// 创建支持代理的 GoogleGenAI 实例
+const createGoogleGenAI = (apiKey: string = "") => {
+  if (USE_PROXY) {
+    // 使用代理时，创建一个自定义配置的实例
+    return new GoogleGenAI({ 
+      apiKey,
+      // 如果代理需要特殊配置，可以在这里添加
+    });
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
 const stylePrompts = {
   [ImageStyle.ILLUSTRATION]: "A modern flat illustration style. Use simple shapes, bold colors, and clean lines. Avoid gradients and complex textures. The characters and objects should be stylized and minimalist. Maintain consistency in this flat illustration style.",
   [ImageStyle.CLAY]: "A charming and tactile claymation style. All objects and characters should appear as if they are sculpted from modeling clay, with visible textures like fingerprints and tool marks. Use a vibrant, saturated color palette and soft, dimensional lighting to enhance the handmade feel. Maintain consistency in this claymation style.",
@@ -72,7 +88,7 @@ export const generateIllustratedCards = async (prompt: string, style: ImageStyle
   if (!apiKey) {
     throw new Error("API Key is required to generate images.");
   }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGoogleGenAI(apiKey);
 
   try {
     if (model === ImageModel.NANO_BANANA) {
@@ -136,7 +152,7 @@ export const generateComicStrip = async (story: string, style: ImageStyle, apiKe
     if (!apiKey) {
         throw new Error("API Key is required to generate images.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     try {
         // Step 1: Generate detailed prompts for each panel using a text model
@@ -218,7 +234,7 @@ export const editComicPanel = async (originalImageBase64: string, prompt: string
     if (!apiKey) {
         throw new Error("API Key is required to edit images.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     try {
         const imagePart = base64ToGenerativePart(originalImageBase64);
@@ -252,7 +268,7 @@ export const generateVideoScriptsForComicStrip = async (story: string, images: G
     if (!apiKey) {
       throw new Error("API Key is required to generate video scripts.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
   
     try {
         const imageParts = images.map(img => base64ToGenerativePart(img.src));
@@ -337,7 +353,7 @@ export const generateTextToImage = async (prompt: string, negativePrompt: string
     if (!apiKey) {
       throw new Error("API Key is required to generate images.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
   
     try {
       const config: GenerateImagesConfig = {
@@ -391,7 +407,7 @@ export const generateFromImageAndPrompt = async (prompt: string, files: File[], 
   if (!apiKey) {
     throw new Error("API Key is required to generate images.");
   }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGoogleGenAI(apiKey);
   const model = 'gemini-2.5-flash-image-preview';
 
   try {
@@ -438,7 +454,7 @@ export const generateWithStyleInspiration = async (
   if (!apiKey) {
     throw new Error("API Key is required to generate images.");
   }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGoogleGenAI(apiKey);
   const model = 'gemini-2.5-flash-image-preview';
 
   try {
@@ -489,7 +505,7 @@ export const generateInpainting = async (prompt: string, originalImageFile: File
   if (!apiKey) {
     throw new Error("API Key is required for inpainting.");
   }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createGoogleGenAI(apiKey);
   const model = 'gemini-2.5-flash-image-preview';
 
   try {
@@ -532,7 +548,7 @@ export const generateVideo = async (prompt: string, startFile: File, aspectRatio
     if (!apiKey) {
         throw new Error("API Key is required to generate videos.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const movementPrompts: Record<CameraMovement, string> = {
         subtle: 'Subtle, ambient motion in the scene. ',
@@ -574,7 +590,7 @@ export const generateVideoTransition = async (
     if (!apiKey) {
         throw new Error("API Key is required to generate videos.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const fullPrompt = `Create a very short, 1.5-second seamless video transition. The video must start with the provided image. Then, smoothly and cinematically animate it to transition into the following scene: "${nextSceneScript}".
     The overall story is about: "${storyContext}".
@@ -606,7 +622,7 @@ export const getVideosOperation = async (operation: any, apiKey: string): Promis
     if (!apiKey) {
         throw new Error("API Key is required.");
     }
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
     try {
         const result = await ai.operations.getVideosOperation({ operation });
         return result;

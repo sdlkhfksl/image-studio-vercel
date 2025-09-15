@@ -58,11 +58,22 @@ Image Studio 整合了 Google 最前沿的生成式 AI 模型，提供了一个�
 
 ### 环境变量配置
 
-您可以通过 Vercel 的环境变量设置来配置 Gemini API Key：
+您可以通过 Vercel 的环境变量设置来配置 Gemini API Key 和代理服务：
 
 1. 在 Vercel 项目设置中，进入 "Environment Variables" 页面
 2. 添加环境变量 `VITE_GEMINI_API_KEY` 并设置您的 API Key 值
-3. 重新部署项目以使环境变量生效
+3. （可选）如果您需要使用代理服务，添加环境变量 `VITE_GEMINI_PROXY_URL` 并设置您的代理服务地址
+4. 重新部署项目以使环境变量生效
+
+#### 代理服务支持
+
+本应用支持通过代理服务访问 Gemini API，这在某些网络环境下非常有用。要使用代理服务：
+
+1. 部署您的代理服务（例如：palm_proxy）
+2. 在环境变量中设置 `VITE_GEMINI_PROXY_URL` 为您的代理服务地址
+3. 应用将自动检测并使用代理服务进行所有 API 请求
+
+代理服务会自动处理 CORS 问题，并帮助绕过网络限制。
 
 ## 🎯 多API密钥功能
 
@@ -95,9 +106,11 @@ Image Studio 整合了 Google 最前沿的生成式 AI 模型，提供了一个�
    cp .env.local.example .env.local
    ```
 
-2. 在 `.env.local` 文件中设置您的 API Key：
+2. 在 `.env.local` 文件中设置您的 API Key 和代理配置：
    ```
    VITE_GEMINI_API_KEY=your_actual_api_key_here
+   # 可选：如果您需要使用代理服务
+   VITE_GEMINI_PROXY_URL=your_proxy_service_url_here
    ```
 
 #### 方法二：在应用界面中设置

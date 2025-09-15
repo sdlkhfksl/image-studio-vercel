@@ -5,6 +5,22 @@ import { GoogleGenAI, Modality, GenerateImagesConfig, Type } from "@google/genai
 import { ImageStyle, CameraMovement, ImageModel, AspectRatio, InspirationStrength, GeneratedImage } from '../types';
 import { MultiApiKeyService } from './multiApiKeyService';
 
+// 检查是否使用代理
+const PROXY_URL = import.meta.env.VITE_GEMINI_PROXY_URL;
+const USE_PROXY = !!PROXY_URL;
+
+// 创建支持代理的 GoogleGenAI 实例
+const createGoogleGenAI = (apiKey: string = "") => {
+  if (USE_PROXY) {
+    // 使用代理时，创建一个自定义配置的实例
+    return new GoogleGenAI({ 
+      apiKey,
+      // 如果代理需要特殊配置，可以在这里添加
+    });
+  }
+  return new GoogleGenAI({ apiKey });
+};
+
 const stylePrompts = {
   [ImageStyle.ILLUSTRATION]: "A modern flat illustration style. Use simple shapes, bold colors, and clean lines. Avoid gradients and complex textures. The characters and objects should be stylized and minimalist. Maintain consistency in this flat illustration style.",
   [ImageStyle.CLAY]: "A charming and tactile claymation style. All objects and characters should appear as if they are sculpted from modeling clay, with visible textures like fingerprints and tool marks. Use a vibrant, saturated color palette and soft, dimensional lighting to enhance the handmade feel. Maintain consistency in this claymation style.",
@@ -69,8 +85,56 @@ const base64ToGenerativePart = (base64Data: string): {inlineData: {data: string,
     };
 };
 
-// 增强的API调用函数，支持多API密钥自动故障转移
+// 创建代理请求的函数
+const createProxyRequest = async (endpoint: string, options: RequestInit): Promise<Response> => {
+  if (!PROXY_URL) {
+    throw new Error("代理URL未配置");
+  }
+
+  const proxyUrl = `${PROXY_URL}${endpoint}`;
+  
+  // 添加查询参数
+  const url = new URL(proxyUrl);
+  
+  // 如果有API密钥，添加到查询参数中
+  const apiKey = options.headers?.['x-goog-api-key'] || 
+                 options.headers?.['Authorization']?.toString().replace('Bearer ', '');
+  if (apiKey && typeof apiKey === 'string') {
+    url.searchParams.set('key', apiKey);
+  }
+
+  // 创建新的请求选项，移除一些不必要的头部
+  const proxyOptions: RequestInit = {
+    ...options,
+    headers: {
+      'Content-Type': options.headers?.['Content-Type'] || 'application/json',
+      'x-goog-api-client': options.headers?.['x-goog-api-client'],
+    }
+  };
+
+  return fetch(url.toString(), proxyOptions);
+};
+
+// 增强的API调用函数，支持多API密钥自动故障转移和代理
 const callGeminiAPI = async <T>(apiCall: (apiKey: string) => Promise<T>): Promise<T> => {
+  // 如果使用代理，直接使用第一个可用的API密钥
+  if (USE_PROXY) {
+    const envApiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    const allKeys = MultiApiKeyService.getAllApiKeys();
+    const apiKey = envApiKey || (allKeys.length > 0 ? allKeys[0].key : null);
+    
+    if (!apiKey) {
+      throw new Error("没有配置任何API密钥。请先设置您的Gemini API密钥。");
+    }
+    
+    try {
+      return await apiCall(apiKey);
+    } catch (error) {
+      console.error("Proxy API call failed:", error);
+      throw error;
+    }
+  }
+
   // 首先尝试从环境变量获取API密钥
   const envApiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (envApiKey) {
@@ -114,7 +178,7 @@ const callGeminiAPI = async <T>(apiCall: (apiKey: string) => Promise<T>): Promis
 
 export const generateIllustratedCards = async (prompt: string, style: ImageStyle, model: ImageModel): Promise<string[]> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     if (model === ImageModel.NANO_BANANA) {
       const fullPrompt = `
@@ -172,7 +236,7 @@ export const generateIllustratedCards = async (prompt: string, style: ImageStyle
 
 export const generateComicStrip = async (story: string, style: ImageStyle, numberOfImages: number): Promise<{ imageUrls: string[], panelPrompts: string[] }> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     // Step 1: Generate detailed prompts for each panel using a text model
     const promptGenerationResponse = await ai.models.generateContent({
@@ -248,7 +312,7 @@ export const generateComicStrip = async (story: string, style: ImageStyle, numbe
 
 export const editComicPanel = async (originalImageBase64: string, prompt: string): Promise<string> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const imagePart = base64ToGenerativePart(originalImageBase64);
     const textPart = { text: prompt };
@@ -275,7 +339,7 @@ export const editComicPanel = async (originalImageBase64: string, prompt: string
 
 export const generateVideoScriptsForComicStrip = async (story: string, images: GeneratedImage[]): Promise<string[]> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const imageParts = images.map(img => base64ToGenerativePart(img.src));
     
@@ -352,7 +416,7 @@ export const generateVideoScriptsForComicStrip = async (story: string, images: G
 
 export const generateTextToImage = async (prompt: string, negativePrompt: string, numberOfImages: number, aspectRatio: AspectRatio): Promise<string[]> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const config: GenerateImagesConfig = {
       numberOfImages: numberOfImages,
@@ -401,7 +465,7 @@ const fileToGenerativePart = (file: File): Promise<{inlineData: {data: string, m
 
 export const generateFromImageAndPrompt = async (prompt: string, files: File[]): Promise<string[]> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
     const model = 'gemini-2.5-flash-image-preview';
 
     const imageParts = await Promise.all(files.map(fileToGenerativePart));
@@ -442,7 +506,7 @@ export const generateWithStyleInspiration = async (
   strength: InspirationStrength
 ): Promise<string[]> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
     const model = 'gemini-2.5-flash-image-preview';
 
     const imagePart = await fileToGenerativePart(referenceImageFile);
@@ -487,7 +551,7 @@ export const generateWithStyleInspiration = async (
 
 export const generateInpainting = async (prompt: string, originalImageFile: File, maskFile: File): Promise<string[]> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
     const model = 'gemini-2.5-flash-image-preview';
 
     const textPart = { 
@@ -525,7 +589,7 @@ export const generateInpainting = async (prompt: string, originalImageFile: File
 
 export const generateVideo = async (prompt: string, startFile: File, aspectRatio: '16:9' | '9:16', cameraMovement: CameraMovement): Promise<any> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const movementPrompts: Record<CameraMovement, string> = {
         subtle: 'Subtle, ambient motion in the scene. ',
@@ -561,7 +625,7 @@ export const generateVideoTransition = async (
     style: ImageStyle
 ): Promise<any> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
 
     const fullPrompt = `Create a very short, 1.5-second seamless video transition. The video must start with the provided image. Then, smoothly and cinematically animate it to transition into the following scene: "${nextSceneScript}".
     The overall story is about: "${storyContext}".
@@ -588,7 +652,7 @@ export const generateVideoTransition = async (
 
 export const getVideosOperation = async (operation: any): Promise<any> => {
   return callGeminiAPI(async (apiKey) => {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = createGoogleGenAI(apiKey);
     const result = await ai.operations.getVideosOperation({ operation });
     return result;
   });
