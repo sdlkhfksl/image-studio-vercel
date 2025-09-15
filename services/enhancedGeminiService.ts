@@ -17,9 +17,12 @@ const createProxyRequest = async (apiKey: string, endpoint: string, body: object
     throw new Error("代理URL未配置");
   }
 
-  // 确保 endpoint 以 / 开头
-  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = new URL(`${PROXY_URL}${path}`);
+  // 智能拼接URL，防止出现双斜杠
+  const cleanedProxyUrl = PROXY_URL.replace(/\/+$/, ''); // 移除末尾的斜杠
+  const cleanedEndpoint = endpoint.replace(/^\/+/, '');   // 移除开头的斜杠
+  const finalUrl = `${cleanedProxyUrl}/${cleanedEndpoint}`;
+
+  const url = new URL(finalUrl);
   url.searchParams.set('key', apiKey);
 
   return fetch(url.toString(), {
