@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GeneratedImage } from '../types';
-import { generateInpainting } from '../services/geminiService';
+import { generateInpainting } from '../services/enhancedGeminiService';;
 import { base64ToFile } from '../utils/imageUtils';
 
 interface InpaintingModalProps {

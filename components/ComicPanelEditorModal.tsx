@@ -1,7 +1,7 @@
 // components/ComicPanelEditorModal.tsx
 import React, { useState, useEffect } from 'react';
 import { GeneratedImage } from '../types';
-import { editComicPanel } from '../services/geminiService';
+import { editComicPanel } from '../services/enhancedGeminiService';;
 import { SparklesIcon } from './icons/SparklesIcon';
 
 interface ComicPanelEditorModalProps {

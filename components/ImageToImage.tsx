@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { GeneratedImage, AspectRatio, InspirationStrength } from '../types';
-import { generateFromImageAndPrompt, generateWithStyleInspiration } from '../services/geminiService';
+import { generateFromImageAndPrompt, generateWithStyleInspiration } from '../services/enhancedGeminiService';;
 import { ImageUploader } from './ImageUploader';
 import { LoadingState } from './LoadingState';
 import { ImageGrid } from './ImageGrid';

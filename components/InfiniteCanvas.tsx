@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ImageUploader } from './ImageUploader';
-import { generateInpainting } from '../services/geminiService';
+import { generateInpainting } from '../services/enhancedGeminiService';;
 import { fileToBase64, base64ToFile } from '../utils/imageUtils';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { XMarkIcon } from './icons/XMarkIcon';

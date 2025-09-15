@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ImageUploader } from './ImageUploader';
 import { EmptyState } from './EmptyState';
-import { generateVideo, getVideosOperation } from '../services/geminiService';
+import { generateVideo, getVideosOperation } from '../services/enhancedGeminiService';;
 import { fileToBase64 } from '../utils/imageUtils';
 import { CameraMovement } from '../types';
 
